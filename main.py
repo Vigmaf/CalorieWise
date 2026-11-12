@@ -1,8 +1,10 @@
+from csv import Error
 from email.errors import MessageError
 
+import re
 from shutil import register_unpack_format
 import sqlite3
-from database import initialize_database, save_calculation
+from database import initialize_database, save_calculation, get_calculations, delete_calculation
 import customtkinter as ctk
 from tkinter import messagebox
 from validation import validate_inputs
@@ -11,6 +13,7 @@ from theme import (
 )
 from ui.calculator_page import CalculatorPage
 from ui.results_page import ResultsPage
+from ui.history_page import HistoryPage
 from calculator import calculate_calories, calculate_macros
 
 
@@ -20,6 +23,59 @@ ctk.set_appearance_mode("dark")
 #ctk.set_default_color_theme("blue")
 
 class calorie_wise_app(ctk.CTk):
+    
+    def delete_saved_calculation(self, record_id):
+        """delete a saved calculation after user confirmation"""
+        
+        #asking for confirmation before deleting
+        confirmed = messagebox.askyesno(
+            "Delete Calculation",
+            f"You sure you wanna delete calculation #{record_id}?\n\n"
+        )
+        
+        if not confirmed:
+            return
+        
+        #DELETE THE RECORD FROM SQLite
+        try:
+            deleted = delete_calculation(record_id)
+            
+            if not deleted:
+                messagebox.showwarning("Not found", "this calculation no longer exist")
+                
+            #RELOADING THE HISTORY PAGE
+            records = get_calculations()
+            self.history_page.show_records(records)
+            
+        except sqlite3.Error as e:
+            messagebox.showerror(
+                "Database error",f"could not update calculation history:\n{e}"
+            )
+            
+    
+    
+    
+    def view_saved_calculation(self, record):
+        """display a saved calculation in the results dashboard"""
+        
+        #update calorie results using stored databaes values
+        self.results_page.set_results(
+            results=record, activity=record["activity"],
+            goal=record["goal"]
+        )
+        
+        #update the saved macro information
+        self.results_page.set_macros(macros=record,target_calories=record["target"])
+        
+        #navigate to the Results page
+        self.show_page("Results")
+        
+        # prevent saving an already saved record again
+        self.results_page.save_button.configure(
+            state="disabled",text="Already Saved"
+        )
+    
+    
     
     #
     def save_current_calculation(self):
@@ -55,6 +111,7 @@ class calorie_wise_app(ctk.CTk):
         #HIDE ALL PAGES BEFORE DISPLAYING THE SELECTED ONE
         self.calculator_page.pack_forget()
         self.results_page.pack_forget()
+        self.history_page.pack_forget()
         
         if page == "Calculator":
             self.description.configure(
@@ -71,6 +128,23 @@ class calorie_wise_app(ctk.CTk):
             )
         elif page == "History":
             self.description.configure(text="Your previous calculations")
+            
+            # Retriving saved calculations
+            try:
+                records = get_calculations()
+            except sqlite3.Error as e:
+                messagebox.showerror("Database Error",
+                                     f"Could not load history:\n{e}")
+                return
+            
+            # Generating the history cards
+            self.history_page.show_records(records)
+            
+            # Displaying the history page
+            self.history_page.pack(
+                fill="both",expand=True, pady=(25,0)
+            )
+            
             
         #HIGHLIGHT THE SELECTED NAVIGATION BUTTON
         for name, button in self.nav_buttons.items():
@@ -228,6 +302,12 @@ class calorie_wise_app(ctk.CTk):
         
         #RESULTS PAGE
         self.results_page = ResultsPage(master=self.content, on_save=self.save_current_calculation)
+        
+        # History Page
+        self.history_page =HistoryPage(
+            master=self.content, on_view= self.view_saved_calculation,
+            on_delete=self.delete_saved_calculation
+        )
         
         
         

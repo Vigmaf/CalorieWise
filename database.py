@@ -108,3 +108,18 @@ def get_calculations():
             dict(row) for row in cursor.fetchall()
         ]
     return records
+
+
+
+def delete_calculation(record_id):
+    """delete a saved calculation by its unique ID"""
+    
+    with closing(sqlite3.connect(DB_PATH)) as connection:
+        
+        cursor = connection.execute(
+            "DELETE FROM calculations WHERE id = ?", (record_id,)
+        )
+        connection.commit()
+        
+        #true if a record was deleted, false otherwise
+        return cursor.rowcount >0
