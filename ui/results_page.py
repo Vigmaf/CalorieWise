@@ -236,7 +236,33 @@ class ResultsPage(ctk.CTkScrollableFrame):
             fill="x",pady=(20,25)
         )
             
+    
+    def clear_results(self):
+        """reset the results dashboard to its initial state"""
+        #reset the daily calorie target
+        self.target_value.configure(text="-- kcal/day")
+        self.goal_info.configure(text="Complete a calculation to see your results")
+        
+        #reset RMR and TDEE
+        for label in self.metric_values.values():
+            label.configure(text="--")
             
+        #reset calculation details
+        for label in self.detail_values.values():
+            label.configure(text="--")
+        
+        #reset macros
+        for key in self.macro_values:
+            self.macro_values[key].configure(text="-- g")
+            self.macro_percentages[key].configure(text="--% of calories")
+            self.macro_bars[key].set(0)
+            
+        #disabling saving until another calculation is made
+        self.save_button.configure(state="disabled", text="Save Calculation")
+        #resotres the dashboard to the state it ad before the user performed and calc
+    
+    
+    
             
     def set_results(self, results, activity, goal):
         """Update dashboard with calculated values"""

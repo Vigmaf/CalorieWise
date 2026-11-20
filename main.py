@@ -47,6 +47,12 @@ class calorie_wise_app(ctk.CTk):
             records = get_calculations()
             self.history_page.show_records(records)
             
+            #clearing results if the currently dipslayteed record was deleted
+            if deleted and self.displayed_saved_id == record_id:
+                self.results_page.clear_results()
+                self.latest_calculation = None
+                self.displayed_saved_id = None
+            
         except sqlite3.Error as e:
             messagebox.showerror(
                 "Database error",f"could not update calculation history:\n{e}"
@@ -75,6 +81,7 @@ class calorie_wise_app(ctk.CTk):
             state="disabled",text="Already Saved"
         )
     
+        self.displayed_saved_id = record["id"]
     
     
     #
@@ -94,6 +101,8 @@ class calorie_wise_app(ctk.CTk):
         except (sqlite3.Error, KeyError) as error:
             messagebox.showerror("Database Error", f"Could not save calculation:\n{error}")
             return
+        
+        self.displayed_saved_id = record_id
         
         # prevent saving the same result repeatedly
         self.results_page.save_button.configure(state="disabled",text="Calculation Saved")
@@ -208,6 +217,8 @@ class calorie_wise_app(ctk.CTk):
             **macros
         }
         
+        self.displayed_saved_id = None
+        
         #UPDATE THE RESULTS DASHBORAD
         self.results_page.set_results(
             results=results, activity=activity, goal=goal
@@ -309,6 +320,7 @@ class calorie_wise_app(ctk.CTk):
             on_delete=self.delete_saved_calculation
         )
         
+        self.displayed_saved_id = None
         
         
         
